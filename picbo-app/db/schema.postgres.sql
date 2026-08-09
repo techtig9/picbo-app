@@ -48,3 +48,17 @@ CREATE TABLE IF NOT EXISTS "Job" (
   "completedAt"    timestamptz
 );
 CREATE INDEX IF NOT EXISTS idx_job_userid ON "Job"("userId", "createdAt");
+CREATE TABLE IF NOT EXISTS "Subscription" (
+  id                     uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  "userId"               uuid NOT NULL REFERENCES "User"(id) ON DELETE CASCADE,
+  "paddleSubscriptionId" text NOT NULL UNIQUE,
+  "paddleCustomerId"     text NOT NULL,
+  tier                   text NOT NULL,
+  interval               text NOT NULL,
+  status                 text NOT NULL DEFAULT 'active',
+  "currentPeriodEnd"     timestamptz,
+  "cancelAtPeriodEnd"    boolean NOT NULL DEFAULT false,
+  "createdAt"            timestamptz NOT NULL DEFAULT now(),
+  "updatedAt"            timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_subscription_userid ON "Subscription"("userId");
