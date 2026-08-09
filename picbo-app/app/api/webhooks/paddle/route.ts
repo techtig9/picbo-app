@@ -17,7 +17,7 @@ export async function POST(req: Request) {
   let event;
   try {
     const paddle = getPaddleClient();
-    event = paddle.webhooks.unmarshal(rawBody, process.env.PADDLE_WEBHOOK_SECRET!, signature);
+    event = await paddle.webhooks.unmarshal(rawBody, process.env.PADDLE_WEBHOOK_SECRET!, signature);
   } catch (err) {
     // Any non-2xx here makes Paddle retry on its normal schedule.
     // Returning 200 on a failed verification marks a possibly-forged
@@ -34,17 +34,17 @@ export async function POST(req: Request) {
         const custom = sub.customData as { userId?: string; tier?: string } | null;
         if (!custom?.userId) break;
 
-        const existing = get<{ id: string }>(
+        const existing = await get<{ id: string }>(
           "SELECT id FROM Subscription WHERE paddleSubscriptionId = ?",
           [sub.id]
         );
         if (existing) {
-          run(
+          await run(
             `UPDATE Subscription SET status = ?, currentPeriodEnd = ?, cancelAtPeriodEnd = ?, updatedAt = datetime('now') WHERE paddleSubscriptionId = ?`,
             [sub.status, sub.currentBillingPeriod?.endsAt ?? null, sub.scheduledChange ? 1 : 0, sub.id]
           );
         } else {
-          run(
+          await run(
             `INSERT INTO Subscription (id, userId, paddleSubscriptionId, paddleCustomerId, tier, interval, status, currentPeriodEnd, cancelAtPeriodEnd)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
@@ -64,7 +64,7 @@ export async function POST(req: Request) {
       }
 
       case EventName.SubscriptionCanceled: {
-        run(
+        await run(
           `UPDATE Subscription SET status = 'canceled', updatedAt = datetime('now') WHERE paddleSubscriptionId = ?`,
           [event.data.id]
         );
@@ -79,14 +79,14 @@ export async function POST(req: Request) {
         // Idempotency: Paddle redelivers webhooks. Reuse the same
         // refId-based dedup pattern lib/credits.ts already uses for
         // generation refunds — never grant the same transaction twice.
-        const already = get<{ id: string }>(
+        const already = await get<{ id: string }>(
           "SELECT id FROM CreditTransaction WHERE refId = ? AND reason = 'subscription_renewal'",
           [txn.id]
         );
         if (already) break;
 
         const amount = TIER_CREDITS[custom.tier];
-        if (amount) grantCredits(custom.userId, amount, "subscription_renewal", txn.id);
+        if (amount) await grantCredits(custom.userId, amount, "subscription_renewal", txn.id);
         break;
       }
 
@@ -99,4 +99,4 @@ export async function POST(req: Request) {
   }
 
   return NextResponse.json({ received: true });
-}
+    }
