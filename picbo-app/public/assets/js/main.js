@@ -800,3 +800,42 @@ if (document.getElementById("plans")) {
     });
   });
 }
+/* ---------- Forgot / reset password -> real API ---------- */
+var forgotForm = document.getElementById("forgotForm");
+if (forgotForm) {
+  var urlToken = new URLSearchParams(window.location.search).get("token");
+  if (urlToken) {
+    document.getElementById("fpStepForm").style.display = "none";
+    document.getElementById("fpStepReset").style.display = "block";
+  }
+
+  forgotForm.addEventListener("submit", function(e){
+    e.preventDefault();
+    fetch("/api/auth/forgot-password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: document.getElementById("fpEmail").value.trim() })
+    }).finally(function(){
+      document.getElementById("fpStepForm").style.display = "none";
+      document.getElementById("fpStepSent").style.display = "block";
+    });
+  });
+
+  var resetForm = document.getElementById("resetForm");
+  if (resetForm) {
+    resetForm.addEventListener("submit", function(e){
+      e.preventDefault();
+      var errEl = document.getElementById("resetError");
+      fetch("/api/auth/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: urlToken, password: document.getElementById("resetPw").value })
+      })
+        .then(function(res){ return res.json().then(function(body){ return { ok: res.ok, body: body }; }); })
+        .then(function(result){
+          if (!result.ok) { errEl.textContent = result.body.error; errEl.style.display = "block"; return; }
+          window.location.href = "login.html?reset=1";
+        });
+    });
+  }
+}
