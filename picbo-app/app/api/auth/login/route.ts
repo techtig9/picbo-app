@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { get } from "@/lib/db";
 import { verifyPassword, createSession, type User } from "@/lib/auth";
+import { isRateLimited, getClientIp } from "@/lib/rate-limit";
 
 const LoginSchema = z.object({
   email: z.string().trim().toLowerCase().email(),
@@ -9,6 +10,14 @@ const LoginSchema = z.object({
 });
 
 export async function POST(req: Request) {
+  const ip = getClientIp(req);
+  if (isRateLimited(`login:${ip}`, 10, 10 * 60 * 1000)) {
+    return NextResponse.json(
+      { error: "Too many login attempts. Try again in a few minutes." },
+      { status: 429 }
+    );
+  }
+
   let body: unknown;
   try {
     body = await req.json();
@@ -22,8 +31,11 @@ export async function POST(req: Request) {
   }
   const { email, password } = parsed.data;
 
-  const user = await get<User>("SELECT * FROM User WHERE email = ?", [email]);
+  const user = get<User>("SELECT * FROM User WHERE email = ?", [email]);
 
+  // Deliberately identical error for "no such user" and "wrong password" —
+  // distinguishing them lets an attacker enumerate which emails have
+  // accounts on this system.
   const invalid = () =>
     NextResponse.json({ error: "Incorrect email or password" }, { status: 401 });
 
