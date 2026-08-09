@@ -62,3 +62,22 @@ CREATE TABLE IF NOT EXISTS "Subscription" (
   "updatedAt"            timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS idx_subscription_userid ON "Subscription"("userId");
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "emailVerifiedAt" timestamptz;
+
+CREATE TABLE IF NOT EXISTS "EmailVerificationToken" (
+  id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  "userId"    uuid NOT NULL REFERENCES "User"(id) ON DELETE CASCADE,
+  "tokenHash" text NOT NULL UNIQUE,
+  "expiresAt" timestamptz NOT NULL,
+  "createdAt" timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS "PasswordResetToken" (
+  id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  "userId"    uuid NOT NULL REFERENCES "User"(id) ON DELETE CASCADE,
+  "tokenHash" text NOT NULL UNIQUE,
+  "expiresAt" timestamptz NOT NULL,
+  "usedAt"    timestamptz,
+  "createdAt" timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_pwreset_userid ON "PasswordResetToken"("userId");
