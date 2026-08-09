@@ -8,7 +8,7 @@ export async function GET() {
     return NextResponse.json({ error: "Not logged in" }, { status: 401 });
   }
 
-  const creditsBalance = getCreditBalance(user.id);
+  const creditsBalance = await getCreditBalance(user.id);
 
   return NextResponse.json({
     user: {
