@@ -30,12 +30,12 @@ export async function POST(req: Request) {
   // app/api/auth/login/route.ts.
   const respond = () => NextResponse.json({ ok: true });
 
-  const user = get<User>("SELECT * FROM User WHERE email = ?", [parsed.data.email]);
+  const user = await get<User>("SELECT * FROM User WHERE email = ?", [parsed.data.email]);
   if (!user) return respond();
 
   const rawToken = crypto.randomBytes(32).toString("hex");
   const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
-  run(
+  await run(
     "INSERT INTO PasswordResetToken (id, userId, tokenHash, expiresAt) VALUES (?, ?, ?, ?)",
     [crypto.randomUUID(), user.id, hashToken(rawToken), expiresAt.toISOString()]
   );
