@@ -769,3 +769,34 @@
   }
 
 })();
+/* ---------- Billing: real Paddle checkout ---------- */
+if (document.getElementById("plans")) {
+  fetch("/api/billing/config").then(function(r){ return r.json(); }).then(function(cfg){
+    if (!cfg.clientToken || typeof Paddle === "undefined") return;
+    Paddle.Environment.set(cfg.environment);
+    Paddle.Initialize({ token: cfg.clientToken });
+  });
+
+  document.querySelectorAll("[data-plan-tier]").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      fetch("/api/billing/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tier: btn.getAttribute("data-plan-tier"),
+          interval: btn.getAttribute("data-plan-interval") || "month"
+        })
+      })
+        .then(function(res){ return res.json().then(function(body){ return { ok: res.ok, body: body }; }); })
+        .then(function(result){
+          if (!result.ok) { showToast(result.body.error || "Couldn't start checkout"); return; }
+          Paddle.Checkout.open({
+            items: [{ priceId: result.body.priceId, quantity: 1 }],
+            customData: result.body.customData,
+            customer: { email: result.body.customerEmail }
+          });
+        })
+        .catch(function(){ showToast("Network error — is the backend running?"); });
+    });
+  });
+}
