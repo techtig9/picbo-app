@@ -23,7 +23,7 @@ export async function POST(req: Request) {
     );
   }
 
-  const row = get<{ id: string; userId: string; expiresAt: string; usedAt: string | null }>(
+  const row = await get<{ id: string; userId: string; expiresAt: string; usedAt: string | null }>(
     "SELECT * FROM PasswordResetToken WHERE tokenHash = ?",
     [hashToken(parsed.data.token)]
   );
@@ -32,11 +32,11 @@ export async function POST(req: Request) {
   }
 
   const passwordHash = await hashPassword(parsed.data.password);
-  run("UPDATE User SET passwordHash = ? WHERE id = ?", [passwordHash, row.userId]);
-  run("UPDATE PasswordResetToken SET usedAt = datetime('now') WHERE id = ?", [row.id]);
+  await run("UPDATE User SET passwordHash = ? WHERE id = ?", [passwordHash, row.userId]);
+  await run("UPDATE PasswordResetToken SET usedAt = datetime('now') WHERE id = ?", [row.id]);
   // Log out every existing session on this account — a leaked/reused
   // reset link shouldn't leave old sessions valid.
-  run("DELETE FROM Session WHERE userId = ?", [row.userId]);
+  await run("DELETE FROM Session WHERE userId = ?", [row.userId]);
 
   return NextResponse.json({ ok: true });
 }
