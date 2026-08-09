@@ -22,11 +22,8 @@ export async function POST(req: Request) {
   }
   const { email, password } = parsed.data;
 
-  const user = get<User>("SELECT * FROM User WHERE email = ?", [email]);
+  const user = await get<User>("SELECT * FROM User WHERE email = ?", [email]);
 
-  // Deliberately identical error for "no such user" and "wrong password" —
-  // distinguishing them lets an attacker enumerate which emails have
-  // accounts on this system.
   const invalid = () =>
     NextResponse.json({ error: "Incorrect email or password" }, { status: 401 });
 
