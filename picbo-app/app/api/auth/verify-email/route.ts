@@ -6,7 +6,7 @@ export async function GET(req: Request) {
   const token = new URL(req.url).searchParams.get("token");
   if (!token) return NextResponse.redirect(new URL("/login.html?verified=0", req.url));
 
-  const row = get<{ userId: string; expiresAt: string }>(
+  const row = await get<{ userId: string; expiresAt: string }>(
     "SELECT userId, expiresAt FROM EmailVerificationToken WHERE tokenHash = ?",
     [hashToken(token)]
   );
@@ -14,7 +14,7 @@ export async function GET(req: Request) {
     return NextResponse.redirect(new URL("/login.html?verified=0", req.url));
   }
 
-  run("UPDATE User SET emailVerifiedAt = datetime('now') WHERE id = ?", [row.userId]);
-  run("DELETE FROM EmailVerificationToken WHERE userId = ?", [row.userId]);
+  await run("UPDATE User SET emailVerifiedAt = datetime('now') WHERE id = ?", [row.userId]);
+  await run("DELETE FROM EmailVerificationToken WHERE userId = ?", [row.userId]);
   return NextResponse.redirect(new URL("/login.html?verified=1", req.url));
 }
