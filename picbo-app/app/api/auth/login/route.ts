@@ -31,7 +31,7 @@ export async function POST(req: Request) {
   }
   const { email, password } = parsed.data;
 
-  const user = get<User>("SELECT * FROM User WHERE email = ?", [email]);
+  const user = await get<User>("SELECT * FROM User WHERE email = ?", [email]);
 
   // Deliberately identical error for "no such user" and "wrong password" —
   // distinguishing them lets an attacker enumerate which emails have
@@ -49,4 +49,4 @@ export async function POST(req: Request) {
   return NextResponse.json({
     user: { id: user.id, name: user.name, email: user.email, role: user.role },
   });
-}
+                                  }
