@@ -28,7 +28,7 @@ export async function POST(req: Request) {
   }
   const { name, email, password } = parsed.data;
 
-  const existing = get<User>("SELECT id FROM User WHERE email = ?", [email]);
+  const existing = await get<User>("SELECT id FROM User WHERE email = ?", [email]);
   if (existing) {
     return NextResponse.json(
       { error: "An account with this email already exists" },
@@ -38,12 +38,12 @@ export async function POST(req: Request) {
 
   const passwordHash = await hashPassword(password);
   const userId = crypto.randomUUID();
-  run(
+  await run(
     "INSERT INTO User (id, name, email, passwordHash, role) VALUES (?, ?, ?, ?, 'user')",
     [userId, name, email, passwordHash]
   );
 
-  grantCredits(userId, SIGNUP_BONUS_CREDITS, "signup_bonus");
+  await grantCredits(userId, SIGNUP_BONUS_CREDITS, "signup_bonus");
   await createSession(userId);
 
   return NextResponse.json(
