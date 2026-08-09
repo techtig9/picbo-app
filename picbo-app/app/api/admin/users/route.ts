@@ -16,20 +16,20 @@ export async function GET() {
   if (!user) {
     return NextResponse.json({ error: "Not logged in" }, { status: 401 });
   }
-  // Real server-side role check — this is the boundary that actually
-  // matters; a hidden admin link in a UI is not a security control.
   if (user.role !== "admin") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const users = all<UserRow>(
+  const users = await all<UserRow>(
     "SELECT id, name, email, role, createdAt FROM User ORDER BY createdAt DESC"
   );
 
-  const withBalances = users.map((u) => ({
-    ...u,
-    creditsBalance: getCreditBalance(u.id),
-  }));
+  const withBalances = await Promise.all(
+    users.map(async (u) => ({
+      ...u,
+      creditsBalance: await getCreditBalance(u.id),
+    }))
+  );
 
   return NextResponse.json({ users: withBalances });
 }
