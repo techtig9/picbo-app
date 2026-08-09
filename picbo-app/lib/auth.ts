@@ -26,7 +26,7 @@ export async function verifyPassword(
   return bcrypt.compare(password, hash);
 }
 
-function hashToken(rawToken: string): string {
+export function hashToken(rawToken: string): string {
   return crypto.createHash("sha256").update(rawToken).digest("hex");
 }
 
