@@ -57,3 +57,17 @@ CREATE TABLE IF NOT EXISTS Job (
   completedAt    TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_job_userId ON Job(userId, createdAt);
+CREATE TABLE IF NOT EXISTS Subscription (
+  id                   TEXT PRIMARY KEY,
+  userId               TEXT NOT NULL REFERENCES User(id) ON DELETE CASCADE,
+  paddleSubscriptionId TEXT NOT NULL UNIQUE,
+  paddleCustomerId     TEXT NOT NULL,
+  tier                 TEXT NOT NULL,
+  interval             TEXT NOT NULL,
+  status               TEXT NOT NULL DEFAULT 'active',
+  currentPeriodEnd     TEXT,
+  cancelAtPeriodEnd    INTEGER NOT NULL DEFAULT 0,
+  createdAt            TEXT NOT NULL DEFAULT (datetime('now')),
+  updatedAt            TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_subscription_userId ON Subscription(userId);
