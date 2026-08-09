@@ -138,7 +138,7 @@
           <span class="plan-name">Starter</span>
           <div class="plan-price"><b>$14</b><span>/month</span></div>
           <div class="plan-tokens"><b>8,000</b>&nbsp;credits / month</div>
-          <button class="btn btn-line btn-block" onclick="picboToast('Switched to Starter')">Switch</button>
+          <button class="btn btn-line btn-block" data-plan-tier="starter" data-plan-interval="month">Switch</button>
         </div>
         <div class="glass price-card hi">
           <span class="price-pop">Current plan</span>
@@ -151,7 +151,7 @@
           <span class="plan-name">Business</span>
           <div class="plan-price"><b>$59</b><span>/month</span></div>
           <div class="plan-tokens"><b>70,000</b>&nbsp;credits / month</div>
-          <button class="btn btn-primary btn-block" onclick="picboToast('Switched to Business')">Upgrade</button>
+          <button class="btn btn-primary btn-block" data-plan-tier="business" data-plan-interval="month">Upgrade</button>
         </div>
         <div class="glass price-card">
           <span class="plan-name">Agency</span>
@@ -209,6 +209,7 @@
   </form>
 </div>
 
+<script src="https://cdn.paddle.com/paddle/v2/paddle.js"></script>
 <script src="assets/js/main.js"></script>
 </body>
 </html>
