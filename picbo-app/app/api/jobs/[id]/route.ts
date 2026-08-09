@@ -17,14 +17,13 @@ export async function GET(
     return NextResponse.json({ error: "Not logged in" }, { status: 401 });
   }
 
-  const { id } = await params; // Next.js 16: route params are async
+  const { id } = await params;
 
-  const job = get<JobRow>("SELECT * FROM Job WHERE id = ?", [id]);
+  const job = await get<JobRow>("SELECT * FROM Job WHERE id = ?", [id]);
   if (!job) {
     return NextResponse.json({ error: "Job not found" }, { status: 404 });
   }
 
-  // A user can only see their own jobs, unless they're an admin.
   if (job.userId !== user.id && user.role !== "admin") {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
