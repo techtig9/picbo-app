@@ -59,17 +59,17 @@ export async function POST(req: Request) {
   const creditsNeeded = CREDIT_COSTS[costKey];
 
   const jobId = crypto.randomUUID();
-  run(
+  await run(
     `INSERT INTO Job (id, userId, type, status, prompt, style, aspectRatio)
      VALUES (?, ?, 'photo', 'processing', ?, ?, ?)`,
     [jobId, user.id, prompt, style ?? null, aspectRatio ?? null]
   );
 
   try {
-    chargeCredits(user.id, creditsNeeded, "generation_charge", jobId);
+    await chargeCredits(user.id, creditsNeeded, "generation_charge", jobId);
   } catch (err) {
     if (err instanceof InsufficientCreditsError) {
-      run("UPDATE Job SET status = 'failed', errorMessage = ? WHERE id = ?", [
+      await run("UPDATE Job SET status = 'failed', errorMessage = ? WHERE id = ?", [
         "Insufficient credits",
         jobId,
       ]);
@@ -88,13 +88,14 @@ export async function POST(req: Request) {
   try {
     const result = await generateImage({ prompt, style, aspectRatio });
 
-    run(
+    // Fixed: datetime('now') is SQLite-only; Postgres uses NOW().
+    await run(
       `UPDATE Job SET status = 'completed', resultUrl = ?, creditsCharged = ?,
-       completedAt = datetime('now') WHERE id = ?`,
+       completedAt = NOW() WHERE id = ?`,
       [result.resultUrl, creditsNeeded, jobId]
     );
 
-    const completedJob = get<JobRow>("SELECT * FROM Job WHERE id = ?", [jobId]);
+    const completedJob = await get<JobRow>("SELECT * FROM Job WHERE id = ?", [jobId]);
 
     return NextResponse.json({
       job: completedJob,
@@ -104,15 +105,12 @@ export async function POST(req: Request) {
         : undefined,
     });
   } catch (err) {
-    // Generation failed after credits were already charged — refund them.
-    // This refund-on-failure pattern (rather than charge-after-success)
-    // is a deliberate choice documented in docs/BACKEND_ARCHITECTURE.md §7.
     try {
-      grantCredits(user.id, creditsNeeded, "refund", jobId);
+      await grantCredits(user.id, creditsNeeded, "refund", jobId);
     } catch {
       /* best-effort refund */
     }
-    run("UPDATE Job SET status = 'failed', errorMessage = ? WHERE id = ?", [
+    await run("UPDATE Job SET status = 'failed', errorMessage = ? WHERE id = ?", [
       err instanceof Error ? err.message : "Generation failed",
       jobId,
     ]);
