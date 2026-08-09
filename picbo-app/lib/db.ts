@@ -1,40 +1,54 @@
 import postgres from "postgres";
+import { AsyncLocalStorage } from "node:async_hooks";
 
-// DATABASE_URL is your real Postgres connection string from Supabase/Neon.
-const sql = postgres(process.env.DATABASE_URL!, { ssl: "require" });
+const connectionString = process.env.DATABASE_URL;
+if (!connectionString || connectionString.startsWith("file:")) {
+  throw new Error(
+    'DATABASE_URL is not a real Postgres connection string. Set it to a value like "postgresql://user:password@host:5432/dbname?sslmode=require" — see .env.example and README.md "Going live".'
+  );
+}
 
-// The rest of the app calls get/all/run/transaction with SQLite-style
-// "?" placeholders (e.g. "SELECT * FROM User WHERE email = ?"). This
-// converts those to Postgres's "$1, $2, ..." positional syntax so the
-// call sites below don't need their SQL strings rewritten.
-function toPositional(query: string): string {
+const globalForDb = globalThis as unknown as { pgClient?: ReturnType<typeof postgres> };
+
+export const sql: ReturnType<typeof postgres> =
+  globalForDb.pgClient ?? postgres(connectionString, { max: 10 });
+if (process.env.NODE_ENV !== "production") {
+  globalForDb.pgClient = sql;
+}
+
+function toPositional(sqliteStyleSql: string): string {
   let i = 0;
-  return query.replace(/\?/g, () => `$${++i}`);
+  return sqliteStyleSql.replace(/\?/g, () => `$${++i}`);
+}
+
+const txContext = new AsyncLocalStorage<ReturnType<typeof postgres>>();
+
+function activeClient(): ReturnType<typeof postgres> {
+  return txContext.getStore() ?? sql;
 }
 
 export async function get<T = Record<string, unknown>>(
   query: string,
   params: unknown[] = []
 ): Promise<T | undefined> {
-  const rows = await sql.unsafe(toPositional(query), params as never[]);
-  return rows[0] as T | undefined;
+  const rows = await activeClient().unsafe(toPositional(query), params as never[]);
+  return (rows[0] as T | undefined) ?? undefined;
 }
 
 export async function all<T = Record<string, unknown>>(
   query: string,
   params: unknown[] = []
 ): Promise<T[]> {
-  const rows = await sql.unsafe(toPositional(query), params as never[]);
+  const rows = await activeClient().unsafe(toPositional(query), params as never[]);
   return rows as unknown as T[];
 }
 
-export async function run(query: string, params: unknown[] = []) {
-  return sql.unsafe(toPositional(query), params as never[]);
+export async function run(query: string, params: unknown[] = []): Promise<void> {
+  await activeClient().unsafe(toPositional(query), params as never[]);
 }
 
 export async function transaction<T>(fn: () => Promise<T>): Promise<T> {
-  const results = await sql.begin(async () => {
-    return fn();
-  });
-  return results as T;
+  return sql.begin((txSql) =>
+    txContext.run(txSql as unknown as ReturnType<typeof postgres>, fn)
+  ) as Promise<T>;
 }
