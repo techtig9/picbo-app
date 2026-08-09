@@ -71,3 +71,22 @@ CREATE TABLE IF NOT EXISTS Subscription (
   updatedAt            TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_subscription_userId ON Subscription(userId);
+ALTER TABLE User ADD COLUMN emailVerifiedAt TEXT;
+
+CREATE TABLE IF NOT EXISTS EmailVerificationToken (
+  id        TEXT PRIMARY KEY,
+  userId    TEXT NOT NULL REFERENCES User(id) ON DELETE CASCADE,
+  tokenHash TEXT NOT NULL UNIQUE,
+  expiresAt TEXT NOT NULL,
+  createdAt TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS PasswordResetToken (
+  id        TEXT PRIMARY KEY,
+  userId    TEXT NOT NULL REFERENCES User(id) ON DELETE CASCADE,
+  tokenHash TEXT NOT NULL UNIQUE,
+  expiresAt TEXT NOT NULL,
+  usedAt    TEXT,
+  createdAt TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_pwreset_userId ON PasswordResetToken(userId);
